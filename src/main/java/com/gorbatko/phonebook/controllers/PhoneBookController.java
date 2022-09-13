@@ -31,10 +31,14 @@ public class PhoneBookController {
             if (userRepo.existsByEmail(userData.getEmail())) {
                 return new ResponseEntity<>(null, HttpStatus.NOT_ACCEPTABLE);
             }
+
             User user = UserConverter.getUserEntityFromData(userData);
             userRepo.save(user);
+
             return new ResponseEntity<>(user, HttpStatus.CREATED);
+
         } catch (Exception e) {
+            e.printStackTrace();
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -45,14 +49,15 @@ public class PhoneBookController {
             Contact contact;
             String userDataEmail = contactData.getUserData().getEmail();
 
-            if (userRepo.existsByEmail(userDataEmail)) {
-                User user = userRepo.findByEmail(userDataEmail);
-                contact = ContactConverter.getContactEntityFromData(contactData, user);
-            } else {
+            if (!userRepo.existsByEmail(userDataEmail)) {
                 return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
             }
+
+            User user = userRepo.findByEmail(userDataEmail);
+            contact = ContactConverter.getContactEntityFromData(contactData, user);
             contactRepo.save(contact);
             return new ResponseEntity<>(contact, HttpStatus.CREATED);
+
         } catch (Exception e) {
             e.printStackTrace();
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -61,12 +66,11 @@ public class PhoneBookController {
 
     @GetMapping("/users/{email}")
     public ResponseEntity<User> findUserByEmail(@PathVariable String email) {
-        if (userRepo.existsByEmail(email)) {
-            User user = userRepo.findByEmail(email);
-            return new ResponseEntity<>(user, HttpStatus.OK);
-        } else {
+        if (!userRepo.existsByEmail(email)) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
+        User user = userRepo.findByEmail(email);
+        return new ResponseEntity<>(user, HttpStatus.OK);
     }
 
     @GetMapping("/contacts/{firstName}")
@@ -77,8 +81,12 @@ public class PhoneBookController {
 
     @GetMapping("/contacts/find/{email}")
     public ResponseEntity<List<Contact>> findListOfUserContacts(@PathVariable String email) {
+        if (!userRepo.existsByEmail(email)) {
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        }
+
         User user = userRepo.findByEmail(email);
-        List<Contact> contactList = contactRepo.findAllByUserId(user.getId());
+        List<Contact> contactList = user.getContactList();
         return new ResponseEntity<>(contactList, HttpStatus.OK);
     }
 
@@ -88,6 +96,14 @@ public class PhoneBookController {
         try {
             UserData userData = contactData.getUserData();
             String userEmail = userData.getEmail();
+
+            if (!userRepo.existsByEmail(userEmail)) {
+                return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+            }
+
+            if (!contactRepo.existsByPhoneNumber(phoneNumber)) {
+                return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+            }
 
             Long userId = userRepo.findByEmail(userEmail).getId();
 
@@ -101,7 +117,8 @@ public class PhoneBookController {
 
             return new ResponseEntity<>(contact, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+            e.printStackTrace();
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -109,15 +126,26 @@ public class PhoneBookController {
     public ResponseEntity<HttpStatus> deleteContact(@PathVariable String phoneNumber,
                                                     @RequestBody UserData userData) {
         try {
-            Long userId = userRepo.findByEmail(userData.getEmail()).getId();
 
+            String email = userData.getEmail();
+
+            if (!userRepo.existsByEmail(email)) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+
+            if (!contactRepo.existsByPhoneNumber(phoneNumber)) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+
+            Long userId = userRepo.findByEmail(userData.getEmail()).getId();
             Contact contact = contactRepo.findByPhoneNumber(userId, phoneNumber);
 
             contactRepo.delete(contact);
 
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
