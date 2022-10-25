@@ -2,12 +2,14 @@ package com.gorbatko.phonebook.converters;
 
 import com.gorbatko.phonebook.entities.Contact;
 import com.gorbatko.phonebook.entities.User;
-import com.gorbatko.phonebook.sources.ContactData;
-import com.gorbatko.phonebook.sources.UserData;
+import com.gorbatko.phonebook.resources.ContactData;
+import com.gorbatko.phonebook.resources.UserData;
+import org.springframework.stereotype.Component;
 
+@Component
 public class ContactConverter {
 
-    public static Contact getContactEntityFromData(ContactData contactData, User user) {
+    public Contact getContactEntityFromData(ContactData contactData, User user) {
 
         String phoneNumber = contactData.getPhoneNumber();
         String firstName = contactData.getFirstName();
@@ -18,7 +20,7 @@ public class ContactConverter {
         return contact;
     }
 
-    public static Contact getContactEntityFromData(ContactData contactData) {
+    public Contact getContactEntityFromData(ContactData contactData) {
 
         String phoneNumber = contactData.getPhoneNumber();
         String firstName = contactData.getFirstName();

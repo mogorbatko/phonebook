@@ -6,18 +6,23 @@ import com.gorbatko.phonebook.entities.Contact;
 import com.gorbatko.phonebook.entities.User;
 import com.gorbatko.phonebook.repositories.ContactRepo;
 import com.gorbatko.phonebook.repositories.UserRepo;
-import com.gorbatko.phonebook.sources.ContactData;
-import com.gorbatko.phonebook.sources.UserData;
+import com.gorbatko.phonebook.resources.ContactData;
+import com.gorbatko.phonebook.resources.ErrorData;
+import com.gorbatko.phonebook.resources.UserData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/api")
 public class PhoneBookController {
+
+    private static Logger logger = Logger.getLogger(PhoneBookController.class.getName());
 
     @Autowired
     private ContactRepo contactRepo;
@@ -25,47 +30,60 @@ public class PhoneBookController {
     @Autowired
     private UserRepo userRepo;
 
+    @Autowired
+    private ContactConverter contactConverter;
+
+    @Autowired
+    private UserConverter userConverter;
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorData> handleException(Exception exception) {
+        StackTraceElement firstStackTraceElement = Arrays.stream(exception.getStackTrace()).findFirst().get();
+        String className = firstStackTraceElement.getClassName();
+        String methodName = firstStackTraceElement.getMethodName();
+        String message = exception.toString();
+        ErrorData error = new ErrorData(className, methodName, message);
+        logger.warning(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase() +
+                ": " + className + "." + methodName + " - " + message);
+        exception.printStackTrace();
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     @PostMapping("/users")
     public ResponseEntity<User> addUser(@RequestBody UserData userData) {
-        try {
-            if (userRepo.existsByEmail(userData.getEmail())) {
-                return new ResponseEntity<>(null, HttpStatus.NOT_ACCEPTABLE);
-            }
-
-            User user = UserConverter.getUserEntityFromData(userData);
-            userRepo.save(user);
-
-            return new ResponseEntity<>(user, HttpStatus.CREATED);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        if (userRepo.existsByEmail(userData.getEmail())) {
+            return new ResponseEntity<>(null, HttpStatus.NOT_ACCEPTABLE);
         }
+        User user = userConverter.getUserEntityFromData(userData);
+        user = userRepo.save(user);
+        return new ResponseEntity<>(user, HttpStatus.CREATED);
     }
 
     @PostMapping("/contacts")
-    public ResponseEntity<Contact> addContact(@RequestBody ContactData contactData) {
-        try {
-            Contact contact;
-            String userDataEmail = contactData.getUserData().getEmail();
-
-            if (!userRepo.existsByEmail(userDataEmail)) {
-                return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
-            }
-
-            User user = userRepo.findByEmail(userDataEmail);
-            contact = ContactConverter.getContactEntityFromData(contactData, user);
-            contactRepo.save(contact);
-            return new ResponseEntity<>(contact, HttpStatus.CREATED);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<Contact> addContact(@RequestParam String userEmail,
+                                              @RequestBody ContactData contactData) {
+        if (!userRepo.existsByEmail(userEmail)) {
+            return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
         }
+        User user = userRepo.findByEmail(userEmail);
+        Contact contact = contactConverter.getContactEntityFromData(contactData, user);
+        contact = contactRepo.save(contact);
+        return new ResponseEntity<>(contact, HttpStatus.CREATED);
     }
 
-    @GetMapping("/users/{email}")
-    public ResponseEntity<User> findUserByEmail(@PathVariable String email) {
+    @GetMapping("/users/all")
+    public ResponseEntity<List<User>> getAllUsers() {
+        return new ResponseEntity<>(userRepo.findAll(), HttpStatus.OK);
+    }
+
+    @GetMapping("/contacts/all")
+    public ResponseEntity<List<Contact>> getAllContacts() {
+        return new ResponseEntity<>(contactRepo.findAll(), HttpStatus.OK);
+    }
+
+
+    @GetMapping("/users")
+    public ResponseEntity<User> findUserByEmail(@RequestParam String email) {
         if (!userRepo.existsByEmail(email)) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
@@ -73,80 +91,46 @@ public class PhoneBookController {
         return new ResponseEntity<>(user, HttpStatus.OK);
     }
 
-    @GetMapping("/contacts/{firstName}")
-    public ResponseEntity<List<Contact>> findListOfContacts(@PathVariable String firstName) {
-        List<Contact> contactList = contactRepo.findByFirstName(firstName);
+    @GetMapping("/contacts/{id}")
+    public ResponseEntity<Contact> getContactById(@PathVariable Long id) {
+        return new ResponseEntity<>(contactRepo.getReferenceById(id), HttpStatus.OK);
+    }
+
+    @GetMapping("/contacts")
+    public ResponseEntity<List<Contact>> findListOfContacts(@RequestParam(required = false) String firstName,
+                                                            @RequestParam(required = false) String lastName,
+                                                            @RequestParam(required = false) String phoneNumber) {
+
+        List<Contact> contactList = contactRepo.findContacts(firstName, lastName, phoneNumber);
         return new ResponseEntity<>(contactList, HttpStatus.OK);
     }
 
-    @GetMapping("/contacts/find/{email}")
-    public ResponseEntity<List<Contact>> findListOfUserContacts(@PathVariable String email) {
-        if (!userRepo.existsByEmail(email)) {
+    @PutMapping("/contacts")
+    public ResponseEntity<Contact> updateContact(@RequestParam String userEmail,
+                                                 @RequestParam String phoneNumber,
+                                                 @RequestBody ContactData contactData) {
+        if (!(userRepo.existsByEmail(userEmail) &&
+                contactRepo.existsByPhoneNumber(phoneNumber))) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
-
-        User user = userRepo.findByEmail(email);
-        List<Contact> contactList = user.getContactList();
-        return new ResponseEntity<>(contactList, HttpStatus.OK);
+        Contact contact = contactRepo.findByPhoneNumber(userEmail, phoneNumber);
+        contact.setPhoneNumber(contactData.getPhoneNumber());
+        contact.setFirstName(contactData.getFirstName());
+        contact.setLastName(contactData.getLastName());
+        contact = contactRepo.save(contact);
+        return new ResponseEntity<>(contact, HttpStatus.OK);
     }
 
-    @PutMapping("/contacts/{phoneNumber}")
-    public ResponseEntity<Contact> updateContact(@PathVariable String phoneNumber,
-                                                 @RequestBody ContactData contactData) {
-        try {
-            UserData userData = contactData.getUserData();
-            String userEmail = userData.getEmail();
-
-            if (!userRepo.existsByEmail(userEmail)) {
-                return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
-            }
-
-            if (!contactRepo.existsByPhoneNumber(phoneNumber)) {
-                return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
-            }
-
-            Long userId = userRepo.findByEmail(userEmail).getId();
-
-            Contact contact = contactRepo.findByPhoneNumber(userId, phoneNumber);
-
-            contact.setPhoneNumber(contactData.getPhoneNumber());
-            contact.setFirstName(contactData.getFirstName());
-            contact.setLastName(contactData.getLastName());
-
-            contactRepo.save(contact);
-
-            return new ResponseEntity<>(contact, HttpStatus.OK);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+    @DeleteMapping("/contacts")
+    public ResponseEntity<HttpStatus> deleteContact(@RequestParam String userEmail,
+                                                    @RequestParam String phoneNumber) {
+        if (!(userRepo.existsByEmail(userEmail) &&
+                contactRepo.existsByPhoneNumber(phoneNumber))) {
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
-    }
-
-    @DeleteMapping("/contacts/{phoneNumber}")
-    public ResponseEntity<HttpStatus> deleteContact(@PathVariable String phoneNumber,
-                                                    @RequestBody UserData userData) {
-        try {
-
-            String email = userData.getEmail();
-
-            if (!userRepo.existsByEmail(email)) {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-            }
-
-            if (!contactRepo.existsByPhoneNumber(phoneNumber)) {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-            }
-
-            Long userId = userRepo.findByEmail(userData.getEmail()).getId();
-            Contact contact = contactRepo.findByPhoneNumber(userId, phoneNumber);
-
-            contactRepo.delete(contact);
-
-            return new ResponseEntity<>(HttpStatus.OK);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        Contact contact = contactRepo.findByPhoneNumber(userEmail, phoneNumber);
+        contactRepo.delete(contact);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
 }
