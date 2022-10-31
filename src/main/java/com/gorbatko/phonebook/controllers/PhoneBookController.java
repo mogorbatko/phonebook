@@ -93,7 +93,11 @@ public class PhoneBookController {
 
     @GetMapping("/contacts/{id}")
     public ResponseEntity<Contact> getContactById(@PathVariable Long id) {
-        return new ResponseEntity<>(contactRepo.getReferenceById(id), HttpStatus.OK);
+        if (contactRepo.findById(id).isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        }
+        Contact contact = contactRepo.findById(id).get();
+        return new ResponseEntity<>(contact, HttpStatus.OK);
     }
 
     @GetMapping("/contacts")

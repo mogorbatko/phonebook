@@ -1,6 +1,6 @@
 package com.gorbatko.phonebook.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -22,9 +22,10 @@ public class Contact {
     private String phoneNumber;
     private String firstName;
     private String lastName;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @ManyToOne
     @JoinColumn(name = "user_id")
-    @JsonIgnore
+    //@JsonIgnore
     private User user;
 
     public Contact(String phoneNumber, String firstName, String lastName, User user) {
@@ -61,13 +62,6 @@ public class Contact {
 //        this.lastName = lastName;
 //    }
 //
-//    public User getUser() {
-//        return user;
-//    }
-//
-//    public void setUser(User user) {
-//        this.user = user;
-//    }
 
 //    @Override
 //    public String toString() {

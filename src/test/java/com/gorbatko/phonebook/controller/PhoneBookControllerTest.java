@@ -321,6 +321,7 @@ public class PhoneBookControllerTest {
                 .andExpect(status().isCreated())
                 .andDo(print())
                 .andReturn();
+        //getting id of contact entity from response
         String actualTestContact1AsStr = resultOfAddingFirstContact.getResponse().getContentAsString();
         Contact actualTestContact1 = new ObjectMapper().readValue(actualTestContact1AsStr, Contact.class);
         Long idOfTestContact1 = actualTestContact1.getId();
