@@ -12,7 +12,10 @@ import com.gorbatko.phonebook.resources.UserData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Arrays;
 import java.util.List;
@@ -49,23 +52,21 @@ public class PhoneBookController {
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    @PostMapping("/users")
-    public ResponseEntity<User> addUser(@RequestBody UserData userData) {
+    @PostMapping("/register")
+    public ResponseEntity<String> registerUser(@RequestBody UserData userData) {
         if (userRepo.existsByEmail(userData.getEmail())) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_ACCEPTABLE);
+            return new ResponseEntity<>("Пользователь уже зарегистрирован в системе!", HttpStatus.BAD_REQUEST);
         }
+        userData.setPassword(new BCryptPasswordEncoder()
+                .encode(userData.getPassword()));
         User user = userConverter.getUserEntityFromData(userData);
-        user = userRepo.save(user);
-        return new ResponseEntity<>(user, HttpStatus.CREATED);
+        userRepo.save(user);
+        return new ResponseEntity<>("Пользователь создан!", HttpStatus.OK);
     }
 
     @PostMapping("/contacts")
-    public ResponseEntity<Contact> addContact(@RequestParam String userEmail,
-                                              @RequestBody ContactData contactData) {
-        if (!userRepo.existsByEmail(userEmail)) {
-            return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
-        }
-        User user = userRepo.findByEmail(userEmail);
+    public ResponseEntity<Contact> addContact(@RequestBody ContactData contactData,
+                                              @AuthenticationPrincipal User user) {
         Contact contact = contactConverter.getContactEntityFromData(contactData, user);
         contact = contactRepo.save(contact);
         return new ResponseEntity<>(contact, HttpStatus.CREATED);
