@@ -11,11 +11,7 @@ import java.util.Optional;
 
 @Repository
 public interface ContactRepo extends JpaRepository<Contact, Long> {
-
     boolean existsByPhoneNumber(String phoneNumber);
-
-//    @Query("SELECT contact FROM Contact contact WHERE contact.user.id = ?1")
-//    List<Contact> findAllByUserId(Long id);
 
     @Query("SELECT contact FROM Contact contact WHERE contact.user.id = ?1 AND contact.phoneNumber = ?2")
     Contact findByPhoneNumber(String id, String phoneNumber);
@@ -29,5 +25,4 @@ public interface ContactRepo extends JpaRepository<Contact, Long> {
     List<Contact> findContacts(@Param("firstName") String firstName,
                                @Param("lastName") String lastName,
                                @Param("phoneNumber") String phoneNumber);
-
 }

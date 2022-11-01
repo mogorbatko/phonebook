@@ -15,10 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-
 import java.util.Random;
-
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -31,7 +28,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class PhoneBookControllerTest {
     @Autowired
     private MockMvc mockMvc;
-
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -48,7 +44,6 @@ public class PhoneBookControllerTest {
         int rightLimit = 122; // letter 'z'
         int targetStringLength = 10;
         Random random = new Random();
-
         return random.ints(leftLimit, rightLimit + 1)
                 .limit(targetStringLength)
                 .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
@@ -82,7 +77,6 @@ public class PhoneBookControllerTest {
                 .andDo(print());
     }
 
-    //    @Order(2)
     @Test
     public void addUserIfExistTest() throws Exception {
         //create user
@@ -102,7 +96,6 @@ public class PhoneBookControllerTest {
                 .andDo(print());
     }
 
-    //    @Order(3)
     @Test
     public void addContactIfUserExistsTest() throws Exception {
         //create user
@@ -131,7 +124,6 @@ public class PhoneBookControllerTest {
                 .andDo(print());
     }
 
-    //@Order(4)
     @Test
     public void addContactIfUserDoesNotExistTest() throws Exception {
         String testUserEmail = getRandomString() + "@mail.com";
@@ -149,7 +141,6 @@ public class PhoneBookControllerTest {
                 .andDo(print());
     }
 
-    //@Order(5)
     @Test
     public void findUserByEmailTest() throws Exception {
         //create user
@@ -170,7 +161,6 @@ public class PhoneBookControllerTest {
                 .andDo(print());
     }
 
-    //@Order(6)
     @Test
     public void findUserByEmailIfUserDoesNotExistTest() throws Exception {
         //create user
@@ -274,7 +264,6 @@ public class PhoneBookControllerTest {
         String actualTestContact2AsStr = resultOfAddingSecondContact.getResponse().getContentAsString();
         Contact actualTestContact2 = new ObjectMapper().readValue(actualTestContact2AsStr, Contact.class);
         Long idOfTestContact2 = actualTestContact2.getId();
-
         //trying to get list of contacts from testDB
         mockMvc.perform(MockMvcRequestBuilders
                         .get("/api/contacts/all"))
@@ -357,7 +346,6 @@ public class PhoneBookControllerTest {
                 .andDo(print());
     }
 
-    //@Order(7)
     @Test
     public void findListOfContactsTest() throws Exception {
         //creating test User
@@ -412,25 +400,6 @@ public class PhoneBookControllerTest {
                 .andDo(print());
     }
 
-//    @Order(8)
-//    @Test
-//    public void findListOfUserContactTest() throws Exception {
-//        String email = "ivan@mail.com";
-//
-//        mockMvc.perform(MockMvcRequestBuilders.get("/api/contacts/find/" + email))
-//                .andExpect(status().isOk());
-//    }
-
-//    @Order(9)
-//    @Test
-//    public void findListOfUserContactIfUserDoesNotExistTest() throws Exception {
-//        String email = "igor@mail.com";
-//
-//        mockMvc.perform(MockMvcRequestBuilders.get("/api/contacts/find/" + email))
-//                .andExpect(status().isNotFound());
-//    }
-
-    //@Order(10)
     @Test
     public void updateContactTest() throws Exception {
         //creating test User
@@ -484,7 +453,6 @@ public class PhoneBookControllerTest {
                 .andDo(print());
     }
 
-    //@Order(11)
     @Test
     public void updateContactIfUserDoesNotExistTest() throws Exception {
         //creating test User
@@ -529,7 +497,6 @@ public class PhoneBookControllerTest {
                 .andDo(print());
     }
 
-    //@Order(12)
     @Test
     public void updateContactIfPhoneNumberDoesNotExistTest() throws Exception {
         //creating test User
@@ -563,7 +530,7 @@ public class PhoneBookControllerTest {
         ContactData testContactData2 = new ContactData(testContactPhoneNum2,
                 testContactFirstName2, testContactLastName2);
         //phoneNumber for PutMapping
-        String testAnotherPhoneNumber = getRandomPhoneNumber() +"1";
+        String testAnotherPhoneNumber = getRandomPhoneNumber() + "1";
         //trying to change first contact to second using testAnotherPhoneNumber
         mockMvc.perform(MockMvcRequestBuilders.put("/api/contacts/")
                         .param("userEmail", testUserEmail)
@@ -574,7 +541,6 @@ public class PhoneBookControllerTest {
                 .andDo(print());
     }
 
-    //@Order(13)
     @Test
     public void deleteContactTest() throws Exception {
         //creating test User
@@ -622,5 +588,4 @@ public class PhoneBookControllerTest {
                 .andExpect(status().isOk())
                 .andDo(print());
     }
-
 }

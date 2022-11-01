@@ -21,18 +21,13 @@ import java.util.logging.Logger;
 @RestController
 @RequestMapping("/api")
 public class PhoneBookController {
-
-    private static Logger logger = Logger.getLogger(PhoneBookController.class.getName());
-
+    private static final Logger logger = Logger.getLogger(PhoneBookController.class.getName());
     @Autowired
     private ContactRepo contactRepo;
-
     @Autowired
     private UserRepo userRepo;
-
     @Autowired
     private ContactConverter contactConverter;
-
     @Autowired
     private UserConverter userConverter;
 
@@ -80,7 +75,6 @@ public class PhoneBookController {
     public ResponseEntity<List<Contact>> getAllContacts() {
         return new ResponseEntity<>(contactRepo.findAll(), HttpStatus.OK);
     }
-
 
     @GetMapping("/users")
     public ResponseEntity<User> findUserByEmail(@RequestParam String email) {
@@ -136,5 +130,4 @@ public class PhoneBookController {
         contactRepo.delete(contact);
         return new ResponseEntity<>(HttpStatus.OK);
     }
-
 }
